@@ -1,10 +1,8 @@
 blueprint:
-  name: Device Availability Checker (with label_id exclude)
+  name: Device Availability Checker (label_id support)
   description: |
-    Checks all entities/devices for availability, and all entities/devices
-    with the 'battery' device_class for battery level.
-
-    Adds support for excluding devices/entities by label_id.
+    Checks device availability and battery levels.
+    Supports excluding entities/devices/areas/labels via target selector.
 
   domain: automation
 
@@ -62,17 +60,9 @@ blueprint:
               value: "7"
 
     exclude:
-      name: Exclude entities/devices/areas
+      name: Exclude items
       selector:
         target:
-
-    exclude_label_id:
-      name: Exclude label IDs
-      description: List of label IDs to exclude
-      default: []
-      selector:
-        text:
-          multiple: true
 
     actions:
       name: Actions
@@ -84,19 +74,20 @@ variables:
   check_battery: !input check_battery
   check_unavailable: !input check_unavailable
   exclude: !input exclude
-  exclude_label_id: !input exclude_label_id
 
   items: >
     {% set entities = namespace(data=[]) %}
     {% set devices = namespace(data=[]) %}
 
-    {% macro label_excluded(entity_id) %}
-      {% set labels = label_ids(entity_id) | default([]) %}
-      {% for lbl in labels %}
-        {% if lbl in exclude_label_id %}
-          {{ true }}
-        {% endif %}
-      {% endfor %}
+    {% macro is_label_excluded(entity_id) %}
+      {% if exclude.label_id is defined %}
+        {% set labels = label_ids(entity_id) | default([]) %}
+        {% for lbl in labels %}
+          {% if lbl in exclude.label_id %}
+            {{ true }}
+          {% endif %}
+        {% endfor %}
+      {% endif %}
       {{ false }}
     {% endmacro %}
 
@@ -117,7 +108,7 @@ variables:
           {% set add = false %}
         {% endif %}
 
-        {% if label_excluded(state.entity_id) %}
+        {% if is_label_excluded(state.entity_id) %}
           {% set add = false %}
         {% endif %}
 
@@ -152,7 +143,7 @@ variables:
         {% set add = false %}
       {% endif %}
 
-      {% if label_excluded(state.entity_id) %}
+      {% if is_label_excluded(state.entity_id) %}
         {% set add = false %}
       {% endif %}
 
@@ -186,7 +177,7 @@ variables:
         {% set add = false %}
       {% endif %}
 
-      {% if label_excluded(state.entity_id) %}
+      {% if is_label_excluded(state.entity_id) %}
         {% set add = false %}
       {% endif %}
 
@@ -220,7 +211,7 @@ variables:
         {% set add = false %}
       {% endif %}
 
-      {% if label_excluded(entity.entity_id) %}
+      {% if is_label_excluded(entity.entity_id) %}
         {% set add = false %}
       {% endif %}
 
